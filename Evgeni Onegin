@@ -1,0 +1,173 @@
+#include "txlib.h"
+#include <stdio.h>
+#include <string.h>
+#include <cstdlib>
+
+
+void swap(char** str1, char** str2);
+int compare_str(const void* str1, const void* str2);
+void bubble_sort(char** text, int num_of_strings);
+void write_to_file(char** text, int num_of_strings, FILE *fileout);
+void make_text(char** text, char* buffer);
+int num_of_str(char* buffer);
+int sizeofFILE(FILE *filein);
+void sort_strings(char* name_filein, char* name_fileout);
+
+int main(void){
+    printf("Row Sorter (c) Dandy_Forever, 2017");
+    sort_strings("shakespeare.txt", "shakespeare_sort.txt");
+    return 0;
+}
+
+//-----------------------------------
+//! Swap two strings
+//!
+//! @param str1  first string
+//! @param str2  second string
+//-----------------------------------
+void swap(char** str1, char** str2){
+    char* kop = *str1;
+    *str1 = *str2;
+    *str2 = kop;
+}
+
+//--------------------------------------------------
+//! Compare two strings without punctuals
+//!
+//! @param [in] str1   string 1
+//! @param [in] str2   string 2
+//!
+//! return strcmp
+//---------------------------------------------------
+int compare_str(const void* str1, const void* str2){
+    const char* string1 = *(char**)str1;
+    const char* string2 = *(char**)str2;
+    while (ispunct(*string1) || isspace(*string1)) string1++;
+    while (ispunct(*string2) || isspace(*string2)) string2++;
+    return strcmp(string1, string2);
+}
+
+//----------------------------------------------------------------
+//! Sort strings by "Bubble sort"
+//!
+//! @param [in] text            pointer on pointer on first string
+//! @param [in] num_of_strings  number of strings of input file
+//-----------------------------------------------------------------
+void bubble_sort(char** text, int num_of_strings){
+    bool stop = false;
+    while (!stop){
+        stop = true;
+        for (int i = 0; i < num_of_strings - 1; i++){
+            if (compare_str(text[i], text[i + 1]) > 0){
+                swap(&text[i], &text[i + 1]);
+                stop = false;
+            }
+        }
+    }
+    for (int i = 0; i < num_of_strings - 1; i++){
+        assert(compare_str(text[i], text[i + 1]) <= 0);
+    }
+}
+
+//------------------------------------------------------------------
+//! Write sorted strings into output file
+//!
+//! @param [in]  text             pointer on pointer on first string
+//! @param [in]  num_of_strings   number of strings of input file
+//! @param [out] fileout          file variable of output file
+//-------------------------------------------------------------------
+void write_to_file(char** text, int num_of_strings, FILE *fileout){
+    for (int i = 0; i < num_of_strings; i++){
+        fprintf(fileout, "%s\n", text[i]);
+    }
+}
+
+//------------------------------------------------------------------------
+//! Make pointers on beginings of the strings
+//!
+//! @param [in] buffer     pointer on first symbol of text from input file
+//! @param [out] text      pointer on pointer on first string
+//------------------------------------------------------------------------
+void make_text(char** text, char* buffer){
+    int num_of_strings = 0;
+    text[num_of_strings] = buffer;
+    num_of_strings++;
+    int i = 0;
+    while (buffer[i] != '\0'){
+        if (buffer[i] == '\n'){
+            buffer[i] = '\0';
+            assert(buffer[i] != '\n');
+            text[num_of_strings] = buffer + i + 1;
+            num_of_strings++;
+        }
+        i++;
+    }
+    assert(num_of_strings != 0);
+}
+
+//-----------------------------------------------------------------------
+//! Number of rows of input file
+//!
+//! @param [in] buffer     pointer on first symbol of text from input file
+//!
+//! @return number of strings in input file
+//-----------------------------------------------------------------------
+int num_of_str(char* buffer){
+    int num_str = 1, i = 0;
+    while (buffer[i] != '\0'){
+        if (buffer[i] == '\n') num_str++;
+        i++;
+    }
+    return num_str;
+}
+
+//---------------------------------------------------
+//! Size of input file
+//!
+//! @param [in] filein     file variable of input file
+//!
+//! @return number of symbols in input file
+//----------------------------------------------------
+int sizeofFILE(FILE *filein){
+    fseek(filein, 0, SEEK_END);
+    int file_length = ftell(filein);
+    rewind(filein);
+    return file_length;
+}
+
+//----------------------------------------------------------------------
+//! Sort rows of input file
+//!
+//! @param [in] name_filein    name of input file
+//! @param [in] name_fileout   name of output file
+//!
+//! @note take rows from input file, sort them and put into output file
+//----------------------------------------------------------------------
+void sort_strings(char* name_filein, char* name_fileout){
+    FILE *filein = NULL, *fileout = NULL;
+    filein = fopen(name_filein, "rb");
+    fileout = fopen(name_fileout, "wb");
+    assert(filein != NULL);
+    assert(fileout != NULL);
+    assert(filein != fileout);
+
+    int file_length = 0;
+    file_length = sizeofFILE(filein);
+    assert(file_length != 0);
+
+    char* buffer = (char*) calloc(file_length + 1, sizeof(*buffer));
+    fread(buffer, file_length, sizeof(*buffer), filein);
+
+    int num_of_strings = 0;
+    num_of_strings = num_of_str(buffer);
+    assert(num_of_strings != 0);
+
+    char** text = (char**) calloc(num_of_strings, sizeof(buffer));
+    make_text(text, buffer);
+
+    qsort(text, num_of_strings, sizeof(*text), compare_str);
+    write_to_file(text, num_of_strings, fileout);
+
+    fclose(filein);
+    fclose(fileout);
+}
