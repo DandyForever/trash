@@ -1,0 +1,238 @@
+#include "txlib.h"
+#include <stdio.h>
+#include <string.h>
+#include <cstdlib>
+#include <algorithm>
+
+struct String{
+    char* str;
+    int length;
+};
+
+const int Alphabet = 1, Dictionary = 2, File_name_size = 100;
+
+int compare_str_begin(const void* str1, const void* str2);
+int compare_str_end(const void* str1, const void* str2);
+void write_to_file(String* text, int num_of_strings, FILE* fileout);
+void make_text(String* text, char* buffer);
+int num_of_str(char* buffer);
+int sizeofFILE(FILE *filein);
+void sort_strings(char* name_filein, char* name_fileout, int number);
+
+int main(void){
+    printf("Row Sorter (c) Dandy_Forever, 2017\n"
+           "Please, write the name of input file\n");
+
+    char* input_file_name = (char*) calloc(File_name_size, sizeof(*input_file_name));
+    scanf("%s", input_file_name);
+    assert(input_file_name != "");
+
+    printf("press '1' if you'd like to sort strings in the alphabetical order\n"
+           "press '2' if you'd like to make the rhyming dictionary\n"
+           "press '3' if you'd like them both\n");
+
+    int number = 0;
+    scanf("%d", &number);
+    assert(number != 0);
+    char* output_file_name = (char*) calloc(File_name_size, sizeof(*output_file_name));
+
+    switch (number){
+    case 1:
+        printf("write the name of file with alphabetical sorted strings\n");
+        scanf("%s", output_file_name);
+        assert(output_file_name != "");
+        sort_strings(input_file_name, output_file_name, Alphabet);
+        break;
+    case 2:
+        printf("write the name of file with rhyming dictionary\n");
+        scanf("%s", output_file_name);
+        assert(output_file_name != "");
+        sort_strings(input_file_name, output_file_name, Dictionary);
+        break;
+    case 3:
+        printf("write the name of file with alphabetical sorted strings\n");
+        scanf("%s", output_file_name);
+        assert(output_file_name != "");
+        sort_strings(input_file_name, output_file_name, Alphabet);
+        output_file_name = (char*) calloc(File_name_size, sizeof(*output_file_name));
+        printf("write the name of file with rhyming dictionary\n");
+        scanf("%s", output_file_name);
+        assert(output_file_name != "");
+        sort_strings(input_file_name, output_file_name, Dictionary);
+        break;
+    default:
+        printf("You pressed something wrong\n"
+               "See you later :)");
+        return 0;
+    }
+    printf("READY\n"
+           "See you later :)");
+
+    return 0;
+}
+
+//---------------------------------------------------------------------------------
+//! Compare two strings
+//!
+//! @param [in] str1   string 1
+//! @param [in] str2   string 2
+//!
+//! @return number > 0 if str1 > str2; number < 0 if str1 < str2; 0 if str1 == str2
+//!
+//! @note ignore spaces and punctuals
+//---------------------------------------------------------------------------------
+int compare_str_begin(const void* str1, const void* str2){
+    String string1 = *(String*)str1;
+    String string2 = *(String*)str2;
+    while (ispunct(*string1.str) || isspace(*string1.str)) (string1.str)++;
+    while (ispunct(*string2.str) || isspace(*string2.str)) (string2.str)++;
+    return strcmp(string1.str, string2.str);
+}
+
+//---------------------------------------------------------------------------------
+//! Compare two strings from the end
+//!
+//! @param [in] str1   string 1
+//! @param [in] str2   string 2
+//!
+//! @return number > 0 if str1 > str2; number < 0 if str1 < str2; 0 if str1 == str2
+//!
+//! @note ignore spaces and punctuals
+//---------------------------------------------------------------------------------
+int compare_str_end(const void* str1, const void* str2){
+    String string1 = *(String*)str1;
+    String string2 = *(String*)str2;
+    int i = 0, j = 0;
+    if (string1.str == string2.str) return 0;
+    int max_len = std::max(string1.length, string2.length);
+    while (i < max_len && j < max_len){
+        if (ispunct(string1.str[string1.length - i - 2]) || isspace(string1.str[string1.length - i - 2])) i++;
+        else if (ispunct(string2.str[string2.length - j - 2]) || isspace(string2.str[string2.length - j - 2])) j++;
+        else{
+            int diference = string1.str[string1.length - i - 2] - string2.str[string2.length - j - 2];
+            if (diference != 0) return diference;
+            else{
+                i++;
+                j++;
+            }
+        }
+    }
+    if (i == string1.length) return -1;
+    else return 1;
+}
+
+//------------------------------------------------------------------
+//! Write sorted strings into output file
+//!
+//! @param [in]  text             array of Srings
+//! @param [in]  num_of_strings   number of strings of input file
+//! @param [out] fileout          a file variable f output file
+//!
+//! @note ignore empty strings
+//-------------------------------------------------------------------
+void write_to_file(String* text, int num_of_strings, FILE *fileout){
+    for (int i = 0; i < num_of_strings; i++){
+        assert(text + i != 0);
+        assert(text[i].str != 0);
+        if (text[i].length > 3) fprintf(fileout, "%s\n", text[i].str);
+    }
+}
+
+//------------------------------------------------------------------------
+//! Make array of pointers on beginnings of the strings
+//!
+//! @param [in] buffer     pointer on first symbol of text from input file
+//! @param [out] text      array of Strings
+//------------------------------------------------------------------------
+void make_text(String* text, char* buffer){
+    int num_of_strings = 0;
+    text[num_of_strings++].str = buffer;
+    int i = 0;
+    while (buffer[i] != '\0'){
+        if (buffer[i] == '\n'){
+            buffer[i] = '\0';
+            assert(buffer[i] != '\n');
+            assert(buffer[i] == '\0');
+            text[num_of_strings - 1].length = buffer + i - text[num_of_strings - 1].str + 1;
+            text[num_of_strings++].str = buffer + i + 1;
+        }
+        i++;
+    }
+    text[num_of_strings - 1].length = buffer + i - text[num_of_strings - 1].str + 1;
+    assert(num_of_strings != 0);
+}
+
+//-----------------------------------------------------------------------
+//! Number of rows of input file
+//!
+//! @param [in] buffer     pointer on first symbol of text from input file
+//!
+//! @return number of strings in input file
+//-----------------------------------------------------------------------
+int num_of_str(char* buffer){
+    int num_str = 1, i = 0;
+    while (buffer[i] != '\0'){
+        if (buffer[i] == '\n') num_str++;
+        i++;
+    }
+    return num_str;
+}
+
+//---------------------------------------------------
+//! Size of input file
+//!
+//! @param [in] filein     file variable of input file
+//!
+//! @return number of symbols in input file
+//----------------------------------------------------
+int sizeofFILE(FILE *filein){
+    fseek(filein, 0, SEEK_END);
+    int file_length = ftell(filein);
+    rewind(filein);
+    return file_length;
+}
+
+//----------------------------------------------------------------------
+//! Sort rows of input file
+//!
+//! @param [in] name_filein    name of input file
+//! @param [in] name_fileout   name of output file
+//! @param [in] number         mode of function
+//!
+//! @note take rows from input file, sort them and put into output file
+//----------------------------------------------------------------------
+void sort_strings(char* name_filein, char* name_fileout, int number){
+    FILE *filein = NULL, *fileout = NULL;
+    filein = fopen(name_filein, "rb");
+    fileout = fopen(name_fileout, "wb");
+    assert(filein != NULL);
+    assert(fileout != NULL);
+    assert(filein != fileout);
+
+    int file_length = 0;
+    file_length = sizeofFILE(filein);
+    assert(file_length != 0);
+
+    char* buffer = (char*) calloc(file_length + 1, sizeof(*buffer));
+    fread(buffer, file_length, sizeof(*buffer), filein);
+
+    int num_of_strings = 0;
+    num_of_strings = num_of_str(buffer);
+    assert(num_of_strings != 0);
+
+    String* text = (String*) calloc(num_of_strings, sizeof(*text));
+    make_text(text, buffer);
+
+    switch (number){
+        case Alphabet:
+            qsort(text, num_of_strings, sizeof(*text), compare_str_begin);
+            break;
+        case Dictionary:
+            qsort(text, num_of_strings, sizeof(*text), compare_str_end);
+            break;
+    }
+    write_to_file(text, num_of_strings, fileout);
+
+    fclose(filein);
+    fclose(fileout);
+}
