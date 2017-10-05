@@ -1,0 +1,216 @@
+#include <stdio.h>
+#include <cstdlib>
+#include <string.h>
+#include <ctype.h>
+#include <cmath>
+
+#define STACK_T(s);\
+    Stack_t s = {Crash_can1, #s};\
+    StackConstruct(&s);
+
+#define assert(condition)\
+        if (!condition)  \
+        {                \
+        fprintf(LogFILE, "ASSERTION %s in %s (%d)\n", #condition, __FILE__, __LINE__);\
+        fclose(LogFILE); \
+        abort();         \
+        }
+
+#define ASSERT_STACK(stck);\
+        if (!StackOK(stck))\
+        {                  \
+        StackDump(stck);   \
+        assert(0);         \
+        }
+
+typedef int StackElem_t;
+
+const int Min_size_st = 1024, Add_size_st = 1024;
+const int Crash_can1 = 666, Crash_can2 = 999;
+
+struct Stack_t
+{
+    int canaryleft;
+    char* name;
+    StackElem_t* data;
+    int count_st;
+    int size_st;
+    int _hash;
+    int _hash_data;
+    int canaryright;
+};
+
+void StackConstruct                 (Stack_t* stck);
+void StackDestruct                  (Stack_t* stck);
+void StackPush                      (Stack_t* stck, const StackElem_t value);
+StackElem_t StackPop                (Stack_t* stck);
+FILE* openlog                       ();
+void closelog                       (void);
+
+FILE* LogFILE = openlog ();
+
+/*int main ()
+{
+    STACK_T(stck);
+    //StackPush(&stack, 10);
+    //printf("%f, %f", StackPop(&stack), StackPop(&stack));
+    for (int i = 0; i < 30; i++)
+    {
+        StackPush(&stck, i);
+        printf ("%d\n%d\n\n", stck._hash, stck._hash_data);
+    }
+    StackDestruct (&stck);
+    atexit(closelog);
+    return 0;
+}*/
+
+void dump (const int value, FILE* file_error_info)
+{
+    fprintf (file_error_info, "%d\n", value);
+}
+
+void dump (const double value, FILE* file_error_info)
+{
+    fprintf (file_error_info, "%f", value);
+    if (value == NAN)
+        fprintf (file_error_info, "       // !!! Not a Number !!!\n");
+    else
+        fprintf (file_error_info, "\n");
+}
+
+void dump (const void* value, FILE* file_error_info)
+{
+    StackElem_t* val = (StackElem_t*) value;
+    if (val == NULL)
+        fprintf (file_error_info, "      // !!! ZERO POINTER !!!");
+    else
+        fprintf (file_error_info, "\n");
+}
+
+void StackDump (const Stack_t* stck)
+{
+    FILE* file_error_info = fopen ("stack_error.txt", "w");
+    assert (file_error_info);
+
+    if (stck->canaryleft == Crash_can1)
+        fprintf(file_error_info, "LEFT canary is OK [%d]\n", stck->canaryleft);
+    else
+        fprintf(file_error_info, "LEFT canary FAILED! [%d] but expected [%d]\n", stck->canaryleft, Crash_can1);
+    if (stck->canaryright == Crash_can2)
+        fprintf(file_error_info, "RIGHT canary is OK [%d]\n", stck->canaryright);
+    else
+        fprintf(file_error_info, "RIGHT canary FAILED! [%d] but expected [%d]\n", stck->canaryright, Crash_can2);
+    fprintf (file_error_info, "Stack_t    [%p]    %s   ERROR!!! {\n", stck, stck->name);
+    fprintf (file_error_info, "    size_st = %d", stck->size_st);
+    if (stck->size_st < Min_size_st)
+        fprintf (file_error_info, "   // !!! < Min size_st !!!\n");
+    else
+        fprintf (file_error_info, "\n");
+
+    fprintf (file_error_info, "    count_st = %d", stck->count_st);
+    if (stck->count_st < 0)
+        fprintf (file_error_info, "   // !!! < 0 !!!");
+    if (stck->count_st >= stck->size_st)
+        fprintf (file_error_info, "   // !!! count_st >= size_st !!!\n");
+    else
+        fprintf (file_error_info, "\n");
+
+    fprintf (file_error_info, "    data [%p] = {\n", stck->data);
+
+    for (int i = 0; i < stck->count_st; i++)
+    {
+        fprintf(file_error_info, "[%d] = ", i);
+        dump(stck->data[i], file_error_info);
+    }
+    fprintf (file_error_info, "   }\n"
+                            "}\n");
+
+    fclose (file_error_info);
+}
+
+FILE* openlog ()
+{
+    FILE* log = fopen("StackLog.txt", "w");
+    return log;
+}
+
+void closelog (void)
+{
+    fclose(LogFILE);
+}
+
+void Stack_hash (Stack_t* stck)
+{
+    stck->_hash =  (stck->canaryleft) * (int)(stck->name) + (int)(stck->name) * (int)(stck->data)
+            + (int)(stck->data) * (stck->count_st) + (stck->count_st) * (stck->size_st)
+            + (stck->size_st) * (stck->canaryright);
+
+    int _hash_d = 0;
+    for (int i = 0; i < stck->count_st - 1; i++){
+        _hash_d += stck->data[i] * stck->data[i + 1];
+    }
+    stck->_hash_data = _hash_d;
+}
+
+bool StackOK (const Stack_t* stck)
+{
+    return stck && stck->count_st >= 0 && stck->data && stck->size_st > stck->count_st
+            && stck->canaryleft == Crash_can1 && stck->canaryright == Crash_can2;
+}
+
+void StackConstruct (Stack_t* stck)
+{
+    stck->size_st = Min_size_st;
+    stck->data = (StackElem_t*) calloc (stck->size_st, sizeof (StackElem_t));
+    stck->count_st = 0;
+    stck->canaryleft = Crash_can1;
+    stck->canaryright = Crash_can2;
+    Stack_hash (stck);
+    ASSERT_STACK(stck);
+}
+
+void StackDestruct (Stack_t* stck)
+{
+    ASSERT_STACK(stck);
+    stck->size_st = Min_size_st;
+    free (stck->data);
+    stck->data = (StackElem_t*) calloc (stck->size_st, sizeof (StackElem_t));
+    stck->count_st = 0;
+    ASSERT_STACK(stck);
+}
+
+void StackGrow (Stack_t* stck)
+{
+    ASSERT_STACK(stck);
+    const int buffer_size_st = stck->size_st + Add_size_st;
+    assert(buffer_size_st > stck->size_st);
+    StackElem_t* buffer = (StackElem_t*) calloc (buffer_size_st, sizeof (StackElem_t));
+    assert (buffer);
+    memcpy (buffer, stck->data, stck->size_st * sizeof (StackElem_t));
+    stck->size_st += Add_size_st;
+    stck->data = buffer;
+    ASSERT_STACK(stck);
+    free (buffer);
+}
+
+void StackPush (Stack_t* stck, const StackElem_t value)
+{
+    ASSERT_STACK(stck);
+    if (stck->count_st + 1 == stck->size_st) StackGrow (stck);
+    ASSERT_STACK(stck);
+    stck->data[stck->count_st++] = value;
+    ASSERT_STACK(stck);
+}
+
+StackElem_t StackPop (Stack_t* stck)
+{
+    if (stck->count_st < 1)
+    {
+        stck->count_st--;
+        ASSERT_STACK(stck);
+    }
+    const StackElem_t pop_val = stck->data[--stck->count_st];
+    ASSERT_STACK(stck);
+    return pop_val;
+}
+
