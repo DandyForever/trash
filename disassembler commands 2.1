@@ -1,0 +1,89 @@
+///MAKER OF COMMANDS OF DISASSEMBLER
+//----------------------------------
+#define UNCKNOWN_REGISTER\
+        default:\
+            printf ("UNCKNOWN REGISTER\n");\
+            assert (0);
+
+#define REGISTER(name, function)\
+            case name:\
+                fprintf (output_file, #function);\
+                fprintf (output_file, " ");\
+                fprintf (output_file, #name);\
+                fprintf (output_file, "\n");\
+\
+                break;
+
+#define JUMP_COMMAND(name)\
+            case name:\
+                i++;\
+                fprintf (output_file, #name);\
+                fprintf (output_file, " :%d\n", buffer[i]);\
+\
+                break;
+
+#define SIMPLE_COMMAND(name)\
+            case name:\
+                fprintf (output_file, #name);\
+                fprintf (output_file, "\n");\
+                \
+                break;
+
+DO_CMD(PUSH, case PUSH:
+            i++;
+            switch (buffer[i])
+            {
+            case VAL:
+                i++;
+                fprintf (output_file, "PUSH %d\n", buffer[i]);
+
+                break;
+            case REG:
+                i++;
+                switch (buffer[i])
+                {
+                REGISTER(AX, PUSH)
+                REGISTER(BX, PUSH)
+                REGISTER(CX, PUSH)
+                REGISTER(DX, PUSH)
+                UNCKNOWN_REGISTER
+                }
+            }
+            break;)
+
+DO_CMD(POP, case POP:
+            i++;
+            switch (buffer[i])
+            {
+            REGISTER(AX, POP)
+            REGISTER(BX, POP)
+            REGISTER(CX, POP)
+            REGISTER(DX, POP)
+            UNCKNOWN_REGISTER
+            }
+            break;)
+
+DO_CMD(ADD, SIMPLE_COMMAND(ADD))
+DO_CMD(SUB, SIMPLE_COMMAND(SUB))
+DO_CMD(MUL, SIMPLE_COMMAND(MUL))
+DO_CMD(DIV, SIMPLE_COMMAND(DIV))
+DO_CMD(OUT, SIMPLE_COMMAND(OUT))
+DO_CMD(IN, SIMPLE_COMMAND(IN))
+DO_CMD(SQRT, SIMPLE_COMMAND(SQRT))
+DO_CMD(SIN, SIMPLE_COMMAND(SIN))
+DO_CMD(COS, SIMPLE_COMMAND(COS))
+DO_CMD(REV, SIMPLE_COMMAND(REV))
+
+DO_CMD(JMP, JUMP_COMMAND(JMP))
+DO_CMD(JE, JUMP_COMMAND(JE))
+DO_CMD(JNE, JUMP_COMMAND(JNE))
+DO_CMD(JA, JUMP_COMMAND(JA))
+DO_CMD(JAE, JUMP_COMMAND(JAE))
+DO_CMD(JB, JUMP_COMMAND(JB))
+DO_CMD(JBE, JUMP_COMMAND(JBE))
+DO_CMD(CALL, JUMP_COMMAND(CALL))
+
+#undef SIMPLE_COMMAND
+#undef JUMP_COMMAND
+#undef REGISTER
+#undef UNCKNOWN_REGISTER
