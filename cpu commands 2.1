@@ -1,0 +1,191 @@
+///MAKER OF COMMANDS OF CPU
+//-------------------------
+#define STACK_SMALL\
+        if (cpu.stck.Size () < MIN_STACK)\
+            {\
+                printf ("Can't compare 2 elements, stack size < 2\n");\
+                cpu_dump (cpu);\
+                assert (0);\
+            }\
+            else
+
+#define BAD_JUMPING\
+        if (buffer[i + 1] == -1)\
+            {\
+                printf ("Bad jumping\n");\
+                cpu_dump (cpu);\
+                assert (0);\
+            }\
+        else
+
+#define EMPTY_STACK\
+        if (cpu.stck.Empty ())\
+            {\
+                printf ("Stack is empty\n");\
+                cpu_dump (cpu);\
+                assert (0);\
+            }\
+            else
+
+#define UNCKNOWN_REGISTER\
+            default:\
+                printf ("UNCKNOWN REGISTER\n");\
+
+
+#define JUMP_IF(name, cmp)\
+        case name:\
+            STACK_SMALL\
+            {\
+                StackElem_t value1 = cpu.stck.Pop ();\
+                StackElem_t value2 = cpu.stck.Pop ();\
+\
+                assert (&value1);\
+                assert (&value2);\
+\
+                if (cmp)\
+                    BAD_JUMPING\
+                    i = buffer[i + 1] - 1;\
+\
+                else\
+                    i++;\
+            }\
+\
+            break;
+
+#define REG_PUSH(name, name_cpu)\
+                case name:\
+                    cpu.stck.Push (name_cpu);\
+\
+                    break;
+
+#define REG_POP(name, name_cpu)\
+                case name:\
+                    name_cpu = cpu.stck.Pop ();\
+\
+                    break;
+
+#define OPERATIONS(name, operation)\
+        case name:\
+            STACK_SMALL\
+            {\
+                StackElem_t value1 = cpu.stck.Pop ();\
+                StackElem_t value2 = cpu.stck.Pop ();\
+\
+                assert (&value1);\
+                assert (&value2);\
+\
+                cpu.stck.Push (value2 operation value1);\
+            }\
+\
+            break;
+
+#define MATH(name, name_cpu)\
+            case name_cpu:\
+            {StackElem_t value = cpu.stck.Pop ();\
+            assert (&value);\
+\
+            cpu.stck.Push (name (value));\
+\
+            break;}
+
+
+
+
+
+DO_CMD(PUSH,case PUSH:
+            i++;
+
+            switch (buffer[i]) {
+            case VAL:
+                cpu.stck.Push (buffer[i + 1]);
+
+                break;
+            case REG:
+                switch (buffer[i + 1]) {
+
+                REG_PUSH(AX, cpu.ax)
+                REG_PUSH(BX, cpu.bx)
+                REG_PUSH(CX, cpu.cx)
+                REG_PUSH(DX, cpu.dx)
+                UNCKNOWN_REGISTER
+                }
+            }
+            i++;
+            break;)
+
+DO_CMD(ADD, OPERATIONS(ADD, +))
+DO_CMD(SUB, OPERATIONS(SUB, -))
+DO_CMD(MUL, OPERATIONS(MUL, *))
+DO_CMD(DIV, OPERATIONS(DIV, /))
+
+DO_CMD(OUT, case OUT:
+            EMPTY_STACK
+            {
+                printf ("%f\n", cpu.stck.Pop ());
+            }
+
+            break;)
+
+DO_CMD(IN, case IN:
+            {StackElem_t value = 0;
+            assert (&value);
+
+            scanf ("%lf", &value);
+
+            cpu.stck.Push (value);
+
+            break;})
+
+DO_CMD(SQRT, MATH(sqrt, SQRT))
+DO_CMD(SIN, MATH(sin, SIN))
+DO_CMD(COS, MATH(cos, COS))
+
+DO_CMD(POP, case POP:
+            i++;
+            EMPTY_STACK
+            {
+                switch (buffer[i]){
+
+                REG_POP(AX, cpu.ax)
+                REG_POP(BX, cpu.bx)
+                REG_POP(CX, cpu.cx)
+                REG_POP(DX, cpu.dx)
+                UNCKNOWN_REGISTER
+                }
+            }
+
+            break;)
+
+DO_CMD(JMP, case JMP:
+            BAD_JUMPING
+            i = buffer[i + 1] - 1;
+
+            break;)
+
+DO_CMD(JE, JUMP_IF(JE, abs (value1 - value2) < EPS))
+DO_CMD(JNE, JUMP_IF(JNE, !(abs (value1 - value2) < EPS)))
+DO_CMD(JA, JUMP_IF(JA, value2 > value1 && !(abs (value1 - value2) < EPS)))
+DO_CMD(JAE, JUMP_IF(JAE, abs (value1 - value2) < EPS || value2 > value1))
+DO_CMD(JB, JUMP_IF(JB, value2 < value1 && !(abs (value1 - value2) < EPS)))
+DO_CMD(JBE, JUMP_IF(JBE, abs (value1 - value2) < EPS || value2 < value1))
+
+DO_CMD(CALL, case CALL:
+            BAD_JUMPING
+            {cpu.calls.Push (i + 1);
+
+            i = buffer[i + 1] - 1;}
+
+            break;)
+
+DO_CMD(REV, case REV:
+            i = (int) cpu.calls.Pop ();)
+
+#undef MATH
+#undef OPERATIONS
+#undef REG_POP
+#undef REG_PUSH
+#undef JUMP_IF
+#undef UNCKNOWN_REGISTER
+#undef EMPTY_STACK
+#undef BAD_JUMPING
+#undef STACK_SMALL
