@@ -1,0 +1,132 @@
+///MAKER OF COMMANDS OF COMPILER
+//------------------------------
+#define COMMAND(name)\
+        if (strcmp (command, #name) == 0)
+
+#define REGISTER(name)\
+        if (strcmp (register_name, #name) == 0)\
+            return name;\
+        else
+
+#define SIMPLE_COMMAND(name)\
+        COMMAND(name)\
+        buffer[(*index)++] = name;\
+    else
+
+#define JUMP_COMMAND(name)\
+        COMMAND(name)\
+    {\
+        char* label = (char*) calloc (LABEL_SIZE, sizeof (*label));\
+        assert (label);\
+\
+        fscanf (input_file, " :%s", label);\
+\
+        buffer[(*index)++] = name;\
+\
+        int point = -1;\
+        assert (&point);\
+\
+        for (int i = 0; i < num_of_labels; i++)\
+        {\
+            if (strcmp (label, labels[i].label) == 0)\
+                point = labels[i].index;\
+        }\
+\
+        buffer[(*index)++] = point;\
+    }\
+\
+    else\
+
+#define REGISTER_NAME\
+        char* register_name = (char*) calloc (REGISTER_SZ, sizeof (*register_name));\
+        assert (register_name);\
+\
+        int number = -1;\
+        assert (&number);\
+\
+        fscanf (input_file, " %[ABCDX] %n", register_name, &number);
+
+#define NOT_WRONG_COMMAND\
+        if (number == -1)\
+            {\
+                printf ("WRONG COMMAND: '%s'\n", command);\
+                assert (0);\
+            }\
+            else
+
+DEF_CMD(PUSH, COMMAND(PUSH)
+    {
+        REGISTER_NAME
+
+        if (number == -1)
+        {
+            int value = 0;
+            assert (&value);
+
+            fscanf (input_file, "%d%n", &value, &number);
+
+            NOT_WRONG_COMMAND
+            {
+                buffer[(*index)++] = PUSH;
+                buffer[(*index)++] = VAL;
+                buffer[(*index)++] = value;
+            }
+        }
+        else
+        {
+            buffer[(*index)++] = PUSH;
+            buffer[(*index)++] = REG;
+            buffer[(*index)++] = tell_register (register_name);
+        }
+
+        free (register_name);
+    }
+
+    else)
+
+DEF_CMD(POP, COMMAND(POP)
+    {
+        REGISTER_NAME
+        NOT_WRONG_COMMAND
+        {
+            buffer[(*index)++] = POP;
+            buffer[(*index)++] = tell_register (register_name);
+        }
+
+        free (register_name);
+    }
+
+    else)
+
+DEF_CMD(ADD, SIMPLE_COMMAND(ADD))
+DEF_CMD(SUB, SIMPLE_COMMAND(SUB))
+DEF_CMD(MUL, SIMPLE_COMMAND(MUL))
+DEF_CMD(DIV, SIMPLE_COMMAND(DIV))
+DEF_CMD(OUT, SIMPLE_COMMAND(OUT))
+DEF_CMD(END, SIMPLE_COMMAND(END))
+DEF_CMD(IN, SIMPLE_COMMAND(IN))
+DEF_CMD(SQRT, SIMPLE_COMMAND(SQRT))
+DEF_CMD(SIN, SIMPLE_COMMAND(SIN))
+DEF_CMD(COS, SIMPLE_COMMAND(COS))
+DEF_CMD(REV, SIMPLE_COMMAND(REV))
+
+DEF_CMD(JE, JUMP_COMMAND(JE))
+DEF_CMD(JNE, JUMP_COMMAND(JNE))
+DEF_CMD(JA, JUMP_COMMAND(JA))
+DEF_CMD(JAE, JUMP_COMMAND(JAE))
+DEF_CMD(JB, JUMP_COMMAND(JB))
+DEF_CMD(JBE, JUMP_COMMAND(JBE))
+DEF_CMD(JMP, JUMP_COMMAND(JMP))
+DEF_CMD(CALL, JUMP_COMMAND(CALL))
+
+DEF_REG(AX, REGISTER(AX))
+DEF_REG(BX, REGISTER(BX))
+DEF_REG(CX, REGISTER(CX))
+DEF_REG(DX, REGISTER(DX))
+
+#undef NOT_WRONG_COMMAND
+#undef REGISTER_NAME
+#undef JUMP_COMMAND
+#undef SIMPLE_COMMAND
+#undef REGISTER
+#undef COMMAND
